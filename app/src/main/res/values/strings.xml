@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">GallerySample</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+
+
+
+    <string name="title_activity_gallery">GalleryActivity</string>
+    <string name="title_activity_get_max_image_size">GetMaxImageSizeActivity</string>
+
+</resources>
