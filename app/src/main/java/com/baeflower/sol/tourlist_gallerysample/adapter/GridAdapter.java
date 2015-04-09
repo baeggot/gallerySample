@@ -2,8 +2,6 @@
 package com.baeflower.sol.tourlist_gallerysample.adapter;
 
 import android.content.Context;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,13 +11,10 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
-import com.baeflower.sol.tourlist_gallerysample.BitmapWorkerTask;
 import com.baeflower.sol.tourlist_gallerysample.R;
-import com.baeflower.sol.tourlist_gallerysample.imagecache.ImageCache;
-import com.baeflower.sol.tourlist_gallerysample.model.TourImage;
+import com.baeflower.sol.tourlist_gallerysample.util.DynamicBitmapLoading;
 import com.baeflower.sol.tourlist_gallerysample.util.BitmapScaleSetting;
 
-import java.lang.ref.WeakReference;
 import java.util.List;
 
 /**
@@ -39,9 +34,8 @@ public class GridAdapter extends BaseAdapter {
 
     // Data
     private BitmapScaleSetting mBitmapScaleSetting;
-    private List<TourImage> mTourImgList;
     private List<Uri> mUriList;
-    private ImageCache mImageCache;
+    // private ImageCache mImageCache;
 
 
     /**
@@ -77,8 +71,8 @@ public class GridAdapter extends BaseAdapter {
     }
 
     @Override
-    public TourImage getItem(int position) {
-        return mTourImgList.get(position);
+    public Uri getItem(int position) {
+        return mUriList.get(position);
     }
 
     @Override
@@ -111,7 +105,7 @@ public class GridAdapter extends BaseAdapter {
             viewHolder = (ViewHolder) view.getTag();
         }
 
-        // 비트맵 이미지 붙이기
+
         /*
             // 캐시 사용
             String path = mTourImgList.get(position).getPath();
@@ -132,8 +126,13 @@ public class GridAdapter extends BaseAdapter {
         }
         */
 
-        BitmapWorkerTask task = new BitmapWorkerTask(viewHolder.imageView, mBitmapScaleSetting);
-        task.execute(mUriList.get(position));
+        // BitmapWorkerTask task = new BitmapWorkerTask(viewHolder.imageView, mBitmapScaleSetting);
+        // task.execute(mUriList.get(position));
+
+
+        // 비트맵 이미지 붙이기
+        DynamicBitmapLoading dynamicBitmapLoading = new DynamicBitmapLoading(mContext);
+        dynamicBitmapLoading.loadBitmap(mUriList.get(position), viewHolder.imageView, mBitmapScaleSetting);
 
 
         if (mMainImgPosition != -1 && mMainImgPosition == position) { // 대표 이미지표시
@@ -143,7 +142,6 @@ public class GridAdapter extends BaseAdapter {
             viewHolder.imageView.setBackgroundResource(R.drawable.img_grid_style);
             viewHolder.vStroke.setVisibility(View.GONE);
         }
-
 
 
         if (ismShowBtns() == false) { // 버튼 리스트 표시하지 않음
@@ -156,8 +154,6 @@ public class GridAdapter extends BaseAdapter {
             }
         }
 
-        // viewHolder.imageView.setLayerType(View.LAYER_TYPE_SOFTWARE, null); //
-        // 하드웨어가속 끄기?
 
         // 이미지 클릭
         viewHolder.imageView.setOnClickListener(new View.OnClickListener() {
@@ -173,7 +169,7 @@ public class GridAdapter extends BaseAdapter {
                     mClickedImgPosition = position;
                     setmShowBtns(true);
                 }
-                notifyDataSetChanged();
+                notifyDataSetChanged(); // 이미지 로드를 다시 타는 듯???
             }
         });
 
@@ -215,56 +211,6 @@ public class GridAdapter extends BaseAdapter {
     public void setmShowBtns(boolean mShowBtns) {
         this.mShowBtns = mShowBtns;
     }
-
-
-    public static boolean cancelPotentialWork(Uri uri, ImageView imageView) {
-        final BitmapWorkerTask bitmapWorkerTask = getBitmapWorkerTask(imageView);
-
-        if (bitmapWorkerTask != null) {
-            final Uri bitmapData = bitmapWorkerTask.getmUri();
-            // If bitmapData is not yet set or it differs from the new data
-            if (bitmapData == null || bitmapData != uri) {
-                // Cancel previous task
-                bitmapWorkerTask.cancel(true);
-            } else {
-                // The same work is already in progress
-                return false;
-            }
-        }
-        // No task associated with the ImageView, or an existing task was cancelled
-        return true;
-    }
-
-    private static BitmapWorkerTask getBitmapWorkerTask(ImageView imageView) {
-        if (imageView != null) {
-            final Drawable drawable = imageView.getDrawable();
-            if (drawable instanceof AsyncDrawable) {
-                final AsyncDrawable asyncDrawable = (AsyncDrawable) drawable;
-                return asyncDrawable.getBitmapWorkerTask();
-            }
-        }
-        return null;
-    }
-
-    static class AsyncDrawable extends BitmapDrawable {
-        private final WeakReference<BitmapWorkerTask> bitmapWorkerTaskReference;
-
-        public AsyncDrawable(Uri uri, BitmapWorkerTask bitmapWorkerTask) {
-            bitmapWorkerTaskReference = new WeakReference<BitmapWorkerTask>(bitmapWorkerTask);
-        }
-
-        public BitmapWorkerTask getBitmapWorkerTask() {
-            return bitmapWorkerTaskReference.get();
-        }
-
-    }
-
-
-
-
-
-
-
 
 
     // 메모리에 정해진 갯수의 이미지만 가지고 있게 해야된다(정한갯수만큼) - 캐시, 캐시로딩?

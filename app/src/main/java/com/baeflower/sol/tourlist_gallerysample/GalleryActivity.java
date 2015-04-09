@@ -13,10 +13,7 @@ import android.widget.GridView;
 
 import com.baeflower.sol.tourlist_gallerysample.adapter.GridAdapter;
 import com.baeflower.sol.tourlist_gallerysample.filecache.FileCache;
-import com.baeflower.sol.tourlist_gallerysample.filecache.FileCacheFactory;
 import com.baeflower.sol.tourlist_gallerysample.imagecache.ImageCache;
-import com.baeflower.sol.tourlist_gallerysample.imagecache.ImageCacheFactory;
-import com.baeflower.sol.tourlist_gallerysample.model.TourImage;
 import com.baeflower.sol.tourlist_gallerysample.util.BitmapScaleSetting;
 import com.baeflower.sol.tourlist_gallerysample.util.Constant;
 
@@ -33,17 +30,13 @@ public class GalleryActivity extends ActionBarActivity implements View.OnClickLi
     private Button mBtnGetImg;
     private GridView mGridView;
 
-    // 폰에서 로딩할 수 있는 최대 픽셀 수(ex. 갤S4 : 4096)
-    // private int mImageSizeBoundary;
-
     private BitmapScaleSetting mBitmapScaleSetting;
 
     // Data
-    private GridAdapter mGridAdapter;
-
-
-    private List<TourImage> mTourListImgList;
     private List<Uri> mUriList;
+
+    // Adapter
+    private GridAdapter mGridAdapter;
 
 
     // Cache
@@ -55,7 +48,6 @@ public class GalleryActivity extends ActionBarActivity implements View.OnClickLi
         mGridView = (GridView) findViewById(R.id.gv_each_image);
 
         // Data
-        mTourListImgList = new ArrayList<>();
         mUriList = new ArrayList<>();
     }
 
@@ -67,27 +59,19 @@ public class GalleryActivity extends ActionBarActivity implements View.OnClickLi
         init();
         mBitmapScaleSetting = new BitmapScaleSetting(getPackageName(), Constant.getMaxTextureSize(), getApplicationContext());
 
+        /*
+            String cacheName = "gallery";
+            FileCacheFactory.initialize(this);
+            if (!FileCacheFactory.getInstance().has(cacheName)) {
+                FileCacheFactory.getInstance().create(cacheName, cacheSize);
+            }
+            mFileCache = FileCacheFactory.getInstance().get(cacheName);
 
-        // Cache
-        // Get max available VM memory, exceeding this amount will throw an
-        // OutOfMemory exception. Stored in kilobytes as LruCache takes an
-        // int in its constructor.
-        final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
-
-        // Use 1/8th of the available memory for this memory cache.
-        final int cacheSize = maxMemory / 8;
-
-        String cacheName = "gallery";
-        FileCacheFactory.initialize(this);
-        if (!FileCacheFactory.getInstance().has(cacheName)) {
-            FileCacheFactory.getInstance().create(cacheName, cacheSize);
-        }
-        mFileCache = FileCacheFactory.getInstance().get(cacheName);
-
-        // 이미지 캐시 초기화
-        int memoryImageMaxCounts = 20;
-        ImageCacheFactory.getInstance().createTwoLevelCache(cacheName, memoryImageMaxCounts);
-        mImageCache = ImageCacheFactory.getInstance().get(cacheName);
+            // 이미지 캐시 초기화
+            int memoryImageMaxCounts = 20;
+            ImageCacheFactory.getInstance().createTwoLevelCache(cacheName, memoryImageMaxCounts);
+            mImageCache = ImageCacheFactory.getInstance().get(cacheName);
+        */
 
 
         // Adapter
@@ -95,18 +79,24 @@ public class GalleryActivity extends ActionBarActivity implements View.OnClickLi
         mGridAdapter = new GridAdapter(getApplicationContext(), mUriList, mBitmapScaleSetting);
         mGridView.setAdapter(mGridAdapter);
 
+
+        // click listener 바인딩
         mBtnGetImg.setOnClickListener(this);
+
 
     } // onCreate
 
     @Override
     public void onClick(View v) {
-        Intent intent = new Intent(Intent.ACTION_PICK,
-                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        intent.setType(MediaStore.Images.Media.CONTENT_TYPE);
-        startActivityForResult(intent, SELECT_FROM_GALLERY);
-
+        switch (v.getId()) {
+            case R.id.btn_get_img:
+                Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                intent.setType(MediaStore.Images.Media.CONTENT_TYPE);
+                startActivityForResult(intent, SELECT_FROM_GALLERY);
+                break;
+        }
     } // onClick
+
 
 
     @Override
@@ -122,15 +112,12 @@ public class GalleryActivity extends ActionBarActivity implements View.OnClickLi
                 mBitmapScaleSetting.setTempImageFile();
 
                 mGridAdapter.setmShowBtns(false);
-                mGridAdapter.notifyDataSetChanged();
+                // mGridAdapter.notifyDataSetChanged();
             }
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        mUriList = null;
-    }
+
 
     /*
         private void addBitmapToImgList(String path) {

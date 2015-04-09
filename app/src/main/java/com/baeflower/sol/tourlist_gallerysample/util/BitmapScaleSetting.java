@@ -122,13 +122,14 @@ public class BitmapScaleSetting {
             // sampleSize = longSide / mImageSizeBoundary;
             sampleSize *= 4;
         } else if (longSide >= mImageSizeBoundary / 2) {
+            sampleSize *= 4;
+        } else if (longSide >= mImageSizeBoundary / 4) {
             sampleSize *= 2;
         }
 
         Log.d(TAG, "sampleSize : " + String.valueOf(sampleSize));
         options.inJustDecodeBounds = false;
         options.inSampleSize = sampleSize;
-        // options.inPurgeable = true; // deprecated, 이거 해도 메모리 해제 안된데요
         options.inDither = false;
 
         Bitmap bitmap = BitmapFactory.decodeFile(mTargetFile.getAbsolutePath(), options);
