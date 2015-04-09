@@ -2,6 +2,9 @@
 package com.baeflower.sol.tourlist_gallerysample.adapter;
 
 import android.content.Context;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,10 +13,13 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
+import com.baeflower.sol.tourlist_gallerysample.BitmapWorkerTask;
 import com.baeflower.sol.tourlist_gallerysample.R;
-import com.baeflower.sol.tourlist_gallerysample.model.TourImage;
 import com.baeflower.sol.tourlist_gallerysample.imagecache.ImageCache;
+import com.baeflower.sol.tourlist_gallerysample.model.TourImage;
+import com.baeflower.sol.tourlist_gallerysample.util.BitmapScaleSetting;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 
 /**
@@ -30,25 +36,24 @@ public class GridAdapter extends BaseAdapter {
     private int mClickedImgPosition;
     private boolean mShowBtns;
 
-    public boolean ismShowBtns() {
-        return mShowBtns;
-    }
 
-    public void setmShowBtns(boolean mShowBtns) {
-        this.mShowBtns = mShowBtns;
-    }
-
+    // Data
+    private BitmapScaleSetting mBitmapScaleSetting;
     private List<TourImage> mTourImgList;
+    private List<Uri> mUriList;
     private ImageCache mImageCache;
+
 
     /**
      * 생성자
      */
-    public GridAdapter(Context context, List<TourImage> tourImgList, ImageCache imageCache) {
+    public GridAdapter(Context context, List<Uri> uriList, BitmapScaleSetting bitmapScaleSetting) {
         layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        mTourImgList = tourImgList;
-        mImageCache = imageCache;
+
+        mUriList = uriList;
         mContext = context;
+        mBitmapScaleSetting = bitmapScaleSetting;
+
         mMainImgPosition = -1; // 초기화
         mClickedImgPosition = -1;
         mShowBtns = false;
@@ -63,12 +68,12 @@ public class GridAdapter extends BaseAdapter {
         View vStroke;
         Button btnTrash;
         Button btnCheck;
-        String path;
+        // String path;
     }
 
     @Override
     public int getCount() {
-        return mTourImgList.size();
+        return mUriList.size();
     }
 
     @Override
@@ -117,7 +122,18 @@ public class GridAdapter extends BaseAdapter {
             }
             viewHolder.imageView.setImageBitmap(cacheBitmap);
         */
-        viewHolder.imageView.setImageBitmap(mTourImgList.get(position).getBitmap());
+
+        /*
+        if (cancelPotentialWork(mUriList.get(position), viewHolder.imageView)) {
+            final BitmapWorkerTask task = new BitmapWorkerTask(viewHolder.imageView, mBitmapScaleSetting);
+            final AsyncDrawable asyncDrawable = new AsyncDrawable(mUriList.get(position), task);
+            viewHolder.imageView.setImageDrawable(asyncDrawable);
+            task.execute(mUriList.get(position));
+        }
+        */
+
+        BitmapWorkerTask task = new BitmapWorkerTask(viewHolder.imageView, mBitmapScaleSetting);
+        task.execute(mUriList.get(position));
 
 
         if (mMainImgPosition != -1 && mMainImgPosition == position) { // 대표 이미지표시
@@ -127,6 +143,8 @@ public class GridAdapter extends BaseAdapter {
             viewHolder.imageView.setBackgroundResource(R.drawable.img_grid_style);
             viewHolder.vStroke.setVisibility(View.GONE);
         }
+
+
 
         if (ismShowBtns() == false) { // 버튼 리스트 표시하지 않음
             viewHolder.btnListLayout.setVisibility(View.GONE);
@@ -163,7 +181,7 @@ public class GridAdapter extends BaseAdapter {
         viewHolder.btnTrash.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mTourImgList.remove(position);
+                mUriList.remove(position);
                 if (mMainImgPosition == position) { // 지우는 거랑 같으면
                     mMainImgPosition = -1;
                 }
@@ -190,6 +208,65 @@ public class GridAdapter extends BaseAdapter {
         return view;
     }
 
+    // Getter and Setters
+    public boolean ismShowBtns() {
+        return mShowBtns;
+    }
+    public void setmShowBtns(boolean mShowBtns) {
+        this.mShowBtns = mShowBtns;
+    }
+
+
+    public static boolean cancelPotentialWork(Uri uri, ImageView imageView) {
+        final BitmapWorkerTask bitmapWorkerTask = getBitmapWorkerTask(imageView);
+
+        if (bitmapWorkerTask != null) {
+            final Uri bitmapData = bitmapWorkerTask.getmUri();
+            // If bitmapData is not yet set or it differs from the new data
+            if (bitmapData == null || bitmapData != uri) {
+                // Cancel previous task
+                bitmapWorkerTask.cancel(true);
+            } else {
+                // The same work is already in progress
+                return false;
+            }
+        }
+        // No task associated with the ImageView, or an existing task was cancelled
+        return true;
+    }
+
+    private static BitmapWorkerTask getBitmapWorkerTask(ImageView imageView) {
+        if (imageView != null) {
+            final Drawable drawable = imageView.getDrawable();
+            if (drawable instanceof AsyncDrawable) {
+                final AsyncDrawable asyncDrawable = (AsyncDrawable) drawable;
+                return asyncDrawable.getBitmapWorkerTask();
+            }
+        }
+        return null;
+    }
+
+    static class AsyncDrawable extends BitmapDrawable {
+        private final WeakReference<BitmapWorkerTask> bitmapWorkerTaskReference;
+
+        public AsyncDrawable(Uri uri, BitmapWorkerTask bitmapWorkerTask) {
+            bitmapWorkerTaskReference = new WeakReference<BitmapWorkerTask>(bitmapWorkerTask);
+        }
+
+        public BitmapWorkerTask getBitmapWorkerTask() {
+            return bitmapWorkerTaskReference.get();
+        }
+
+    }
+
+
+
+
+
+
+
+
+
     // 메모리에 정해진 갯수의 이미지만 가지고 있게 해야된다(정한갯수만큼) - 캐시, 캐시로딩?
     // 리스트뷰에 이미지 로드하는 예제를 찾다보면 캐시를 구현해 놓은게 있다
     // 스크롤해도 동적으로 로딩하고, 로딩하다가 화면 넘어가면 캔슬하고... 어댑터, 스레드에서?
@@ -201,7 +278,10 @@ public class GridAdapter extends BaseAdapter {
 
     // 스레드 써서 동적 로딩?
 
-    // 메모리 캐시
+    // 메모리 캐시는 의미가 없다? 이미지리스트에 넣는 순간 메모리를 먹고 캐시에서도 메모리를 먹으니깐? ... 이해가 안가넹
+
     // 로드하는 부분을 스레드 처리를 해서 디스크 캐시를 처리해야된다
+
+
 
 }
